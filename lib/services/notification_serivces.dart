@@ -48,7 +48,6 @@ class NotificationService {
     // Request permission for iOS
     await _requestPermissions();
 
-    // IMPORTANT CHANGE: Make token update non-blocking
     try {
       await _updateFCMToken();
     } catch (e) {
