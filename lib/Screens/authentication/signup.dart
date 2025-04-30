@@ -1,10 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:loyaltycard/Screens/authentication/login.dart';
 import 'package:loyaltycard/Screens/home.dart';
-
 import 'package:loyaltycard/wrapper.dart';
 
 class Signup extends StatefulWidget {
@@ -21,16 +22,45 @@ class _SignupState extends State<Signup> {
   bool isGoogleLoading = false;
   bool obscureText = true;
 
+  // Primary brand colors - matching login page
+  final Color primaryBlue = Color(0xFF1976D2); // Material blue
+  final Color lightBlue = Color(0xFF64B5F6); // Lighter blue for accents
+  final Color darkBlue = Color(0xFF0D47A1); // Darker blue for text
+
+  // Method to save user data to Firestore
+  Future<void> _saveUserDataToFirestore(User user) async {
+    try {
+      // Get FCM token for push notifications
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+
+      // Store user data in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'email': user.email,
+        'fcmToken': fcmToken,
+      });
+
+      print('User data saved to Firestore successfully');
+    } catch (e) {
+      print('Error saving user data to Firestore: $e');
+      Get.snackbar(
+        'Warning',
+        'Your account was created but profile data could not be saved. Some features might be limited.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withOpacity(0.7),
+        colorText: Colors.white,
+        margin: EdgeInsets.all(10),
+        duration: Duration(seconds: 5),
+      );
+    }
+  }
+
   Future<void> signup() async {
     if (emailcontroller.text.isEmpty || passcontroller.text.isEmpty) {
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text('Please enter both email and password')),
-      // );
       Get.snackbar(
         'No data',
         'Please enter both email and password',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withOpacity(0.7),
+        backgroundColor: primaryBlue.withOpacity(0.7),
         colorText: Colors.white,
         margin: EdgeInsets.all(10),
         duration: Duration(seconds: 3),
@@ -39,9 +69,6 @@ class _SignupState extends State<Signup> {
     }
 
     if (passcontroller.text.length < 6) {
-      // Logger.warning(Logger.USER, "Password too short",
-      // {"length": passcontroller.text.length.toString()});
-
       setState(() {
         isLoading = false;
       });
@@ -49,8 +76,7 @@ class _SignupState extends State<Signup> {
         'Weak Password',
         'Password must be at least 6 characters long',
         snackPosition: SnackPosition.TOP,
-        backgroundColor:
-            const Color.fromARGB(255, 209, 46, 46).withOpacity(0.7),
+        backgroundColor: Colors.red.withOpacity(0.7),
         colorText: Colors.white,
         margin: EdgeInsets.all(10),
         duration: Duration(seconds: 3),
@@ -60,22 +86,23 @@ class _SignupState extends State<Signup> {
 
     setState(() => isLoading = true);
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // Create user with email and password
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailcontroller.text.trim(),
         password: passcontroller.text.trim(),
       );
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(
-      //     content: Text('Account created successfully'),
-      //     behavior: SnackBarBehavior.floating,
-      //     margin: EdgeInsets.only(top: 20, left: 20, right: 20),
-      //   ),
-      // );
+
+      // Save user data to Firestore
+      if (userCredential.user != null) {
+        await _saveUserDataToFirestore(userCredential.user!);
+      }
+
       Get.snackbar(
         'Success',
         'Account created successfully',
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withOpacity(0.7),
+        backgroundColor: primaryBlue.withOpacity(0.7),
         colorText: Colors.white,
         margin: EdgeInsets.all(10),
         duration: Duration(seconds: 3),
@@ -90,14 +117,11 @@ class _SignupState extends State<Signup> {
       } else if (e.code == 'invalid-email') {
         message = 'Please enter a valid email address';
       }
-      // ScaffoldMessenger.of(context)
-      //     .showSnackBar(SnackBar(content: Text(message)));
       Get.snackbar(
         'Error',
         message,
         snackPosition: SnackPosition.TOP,
-        backgroundColor:
-            const Color.fromARGB(255, 222, 15, 15).withOpacity(0.7),
+        backgroundColor: Colors.red.withOpacity(0.7),
         colorText: Colors.white,
         margin: EdgeInsets.all(10),
         duration: Duration(seconds: 3),
@@ -128,14 +152,26 @@ class _SignupState extends State<Signup> {
         idToken: googleAuth.idToken,
       );
 
+      // Sign in to Firebase with Google credential
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(credential);
 
-      Get.offAll(() => Homepage());
+      // Save user data to Firestore for Google sign-in as well
+      if (userCredential.user != null) {
+        await _saveUserDataToFirestore(userCredential.user!);
+      }
+
+      Get.offAll(() => HomePage());
     } catch (e) {
-      setState(() {
-        var errorMessage = 'Google sign-in failed: $e';
-      });
+      Get.snackbar(
+        'Error',
+        'Google sign-in failed: $e',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.withOpacity(0.7),
+        colorText: Colors.white,
+        margin: EdgeInsets.all(10),
+        duration: Duration(seconds: 3),
+      );
     } finally {
       setState(() {
         isGoogleLoading = false;
@@ -147,7 +183,7 @@ class _SignupState extends State<Signup> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white, // Changed to white to match login page
       body: Center(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
@@ -160,30 +196,39 @@ class _SignupState extends State<Signup> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: darkBlue, // Changed to dark blue to match login page
                 ),
               ),
               SizedBox(height: 8),
               Text(
                 "Sign up to get started",
-                style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+                style: TextStyle(
+                    fontSize: 16,
+                    color:
+                        Colors.grey[700]), // Darker grey for white background
               ),
               SizedBox(height: 20),
               TextField(
                 controller: emailcontroller,
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                    color: Colors.black87), // Changed text color to match login
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  labelStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.email, color: Colors.white),
+                  labelStyle: TextStyle(color: Colors.grey[700]),
+                  prefixIcon: Icon(Icons.email,
+                      color: primaryBlue), // Changed to primary blue
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: Colors.grey),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.white),
+                    borderSide: BorderSide(
+                        color: primaryBlue), // Changed to primary blue
                   ),
+                  filled: true,
+                  fillColor:
+                      Colors.grey[100], // Light grey background for fields
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -191,15 +236,17 @@ class _SignupState extends State<Signup> {
               TextField(
                 controller: passcontroller,
                 obscureText: obscureText,
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                    color: Colors.black87), // Changed text color to match login
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.lock, color: Colors.white),
+                  labelStyle: TextStyle(color: Colors.grey[700]),
+                  prefixIcon: Icon(Icons.lock,
+                      color: primaryBlue), // Changed to primary blue
                   suffixIcon: IconButton(
                     icon: Icon(
                       obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white,
+                      color: primaryBlue, // Changed to primary blue
                     ),
                     onPressed: () => setState(() => obscureText = !obscureText),
                   ),
@@ -209,60 +256,58 @@ class _SignupState extends State<Signup> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.white),
+                    borderSide: BorderSide(
+                        color: primaryBlue), // Changed to primary blue
                   ),
+                  filled: true,
+                  fillColor:
+                      Colors.grey[100], // Light grey background for fields
                 ),
               ),
               SizedBox(height: 30),
               ElevatedButton(
                 onPressed: isLoading ? null : signup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
+                  backgroundColor: primaryBlue, // Changed to primary blue
+                  foregroundColor: Colors.white, // White text
                   minimumSize: Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                   disabledBackgroundColor: Colors.grey,
+                  elevation: 3, // Added elevation for depth
                 ),
                 child: isLoading
-                    ? CircularProgressIndicator(color: Colors.black)
+                    ? CircularProgressIndicator(color: Colors.white)
                     : Text("Sign Up", style: TextStyle(fontSize: 18)),
               ),
               SizedBox(height: 24),
               SizedBox(
-                width: double
-                    .infinity, // Ensures the button fills the width of the container
+                width: double.infinity,
                 child: ElevatedButton(
-                  onPressed:
-                      login, // Replace 'login' with your Google sign-in logic
+                  onPressed: login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white, // Button background color
-                    foregroundColor: Colors.black, // Text and icon color
-                    padding: EdgeInsets.symmetric(
-                        vertical: 16), // Match Login button's height
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          10), // Rounded corners for consistency
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    side: BorderSide(color: Colors.grey[300]!), // Add border
+                    elevation: 2, // Lower elevation for secondary button
                   ),
                   child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center, // Center the content
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
                         'assets/images/google.webp',
-                        height: 24, // Adjust the icon size
+                        height: 24,
                         width: 24,
                       ),
-                      SizedBox(
-                          width:
-                              8), // Add spacing between the icon and the text
+                      SizedBox(width: 8),
                       Text(
                         "Sign in with Google",
-                        style: TextStyle(
-                            fontSize:
-                                16), // Match text size with the Login button
+                        style: TextStyle(fontSize: 16),
                       ),
                     ],
                   ),
@@ -274,7 +319,8 @@ class _SignupState extends State<Signup> {
                 children: [
                   Text(
                     "Already have an account?",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Colors.grey[700]), // Changed to darker grey
                   ),
                   TextButton(
                     onPressed: () => Get.to(Login()),
@@ -282,7 +328,7 @@ class _SignupState extends State<Signup> {
                       "Login",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: primaryBlue, // Changed to primary blue
                       ),
                     ),
                   ),

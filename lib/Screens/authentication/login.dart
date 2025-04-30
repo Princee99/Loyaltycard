@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:loyaltycard/Screens/authentication/forgot_pass.dart';
 import 'package:loyaltycard/Screens/authentication/signup.dart';
 import 'package:loyaltycard/Screens/home.dart';
-
 import 'package:loyaltycard/wrapper.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -23,10 +22,18 @@ class _LoginState extends State<Login> {
   bool isGoogleLoading = false;
   String? errorMessage;
 
+  // Primary brand colors
+  final Color primaryBlue = Color(0xFF1976D2); // Material blue
+  final Color lightBlue = Color(0xFF64B5F6); // Lighter blue for accents
+  final Color darkBlue = Color(0xFF0D47A1); // Darker blue for text
+
   Future<void> signIn() async {
     if (emailController.text.isEmpty || passController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter both email and password')),
+        SnackBar(
+          content: Text('Please enter both email and password'),
+          backgroundColor: primaryBlue,
+        ),
       );
       return;
     }
@@ -39,7 +46,10 @@ class _LoginState extends State<Login> {
       );
       Get.to(Wrapper());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login successful')),
+        SnackBar(
+          content: Text('Login successful'),
+          backgroundColor: primaryBlue,
+        ),
       );
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred';
@@ -48,8 +58,10 @@ class _LoginState extends State<Login> {
       } else if (e.code == 'wrong-password') {
         message = 'Wrong password';
       }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ));
     } finally {
       setState(() => isLoading = false);
     }
@@ -79,11 +91,15 @@ class _LoginState extends State<Login> {
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(credential);
 
-      Get.offAll(() => Homepage());
+      Get.offAll(() => HomePage());
     } catch (e) {
       setState(() {
         errorMessage = 'Google sign-in failed: $e';
       });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errorMessage ?? 'Sign-in failed'),
+        backgroundColor: Colors.red,
+      ));
     } finally {
       setState(() {
         isGoogleLoading = false;
@@ -95,7 +111,7 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false, // Prevents keyboard from pushing the UI
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white, // Changed from black to white
       body: Center(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
@@ -108,45 +124,54 @@ class _LoginState extends State<Login> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: darkBlue, // Changed from white to dark blue
                 ),
               ),
               SizedBox(height: 8),
               Text(
                 "Login to your account",
-                style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+                style: TextStyle(
+                    fontSize: 16,
+                    color:
+                        Colors.grey[700]), // Darker grey for white background
               ),
               SizedBox(height: 20),
               TextField(
                 controller: emailController,
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.black87), // Changed text color
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  labelStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.email, color: Colors.white),
+                  labelStyle: TextStyle(color: Colors.grey[700]),
+                  prefixIcon: Icon(Icons.email,
+                      color: primaryBlue), // Changed icon color
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: Colors.grey),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.white),
+                    borderSide:
+                        BorderSide(color: primaryBlue), // Changed to blue
                   ),
+                  filled: true,
+                  fillColor:
+                      Colors.grey[100], // Light grey background for fields
                 ),
               ),
               SizedBox(height: 15),
               TextField(
                 controller: passController,
                 obscureText: obscureText,
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.black87), // Changed text color
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.lock, color: Colors.white),
+                  labelStyle: TextStyle(color: Colors.grey[700]),
+                  prefixIcon: Icon(Icons.lock,
+                      color: primaryBlue), // Changed icon color
                   suffixIcon: IconButton(
                     icon: Icon(
                       obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white,
+                      color: primaryBlue, // Changed icon color
                     ),
                     onPressed: () => setState(() => obscureText = !obscureText),
                   ),
@@ -156,8 +181,12 @@ class _LoginState extends State<Login> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.white),
+                    borderSide:
+                        BorderSide(color: primaryBlue), // Changed to blue
                   ),
+                  filled: true,
+                  fillColor:
+                      Colors.grey[100], // Light grey background for fields
                 ),
               ),
               SizedBox(height: 10),
@@ -167,7 +196,9 @@ class _LoginState extends State<Login> {
                   onPressed: () => Get.to(ForgotPass()),
                   child: Text(
                     "Forgot Password?",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: primaryBlue,
+                        fontWeight: FontWeight.bold), // Changed to blue
                   ),
                 ),
               ),
@@ -175,52 +206,47 @@ class _LoginState extends State<Login> {
               ElevatedButton(
                 onPressed: isLoading ? null : signIn,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
+                  backgroundColor: primaryBlue, // Changed to blue
+                  foregroundColor: Colors.white, // White text on blue
                   minimumSize: Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                   disabledBackgroundColor: Colors.grey,
+                  elevation: 3, // Added elevation for depth
                 ),
                 child: isLoading
-                    ? CircularProgressIndicator(color: Colors.black)
+                    ? CircularProgressIndicator(
+                        color: Colors.white) // Changed to white
                     : Text("Login", style: TextStyle(fontSize: 18)),
               ),
               SizedBox(height: 24),
               SizedBox(
-                width: double
-                    .infinity, // Ensures the button fills the width of the container
+                width: double.infinity,
                 child: ElevatedButton(
-                  onPressed:
-                      login, // Replace 'login' with your Google sign-in logic
+                  onPressed: login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white, // Button background color
-                    foregroundColor: Colors.black, // Text and icon color
-                    padding: EdgeInsets.symmetric(
-                        vertical: 16), // Match Login button's height
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          10), // Rounded corners for consistency
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    side: BorderSide(color: Colors.grey[300]!), // Add border
+                    elevation: 2, // Lower elevation for secondary button
                   ),
                   child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center, // Center the content
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
                         'assets/images/google.webp',
-                        height: 24, // Adjust the icon size
+                        height: 24,
                         width: 24,
                       ),
-                      SizedBox(
-                          width:
-                              8), // Add spacing between the icon and the text
+                      SizedBox(width: 8),
                       Text(
                         "Sign in with Google",
-                        style: TextStyle(
-                            fontSize:
-                                16), // Match text size with the Login button
+                        style: TextStyle(fontSize: 16),
                       ),
                     ],
                   ),
@@ -232,7 +258,8 @@ class _LoginState extends State<Login> {
                 children: [
                   Text(
                     "Don't have an account?",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Colors.grey[700]), // Changed to dark grey
                   ),
                   TextButton(
                     onPressed: () => Get.to(Signup()),
@@ -240,7 +267,7 @@ class _LoginState extends State<Login> {
                       "Sign Up",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: primaryBlue, // Changed to blue
                       ),
                     ),
                   ),

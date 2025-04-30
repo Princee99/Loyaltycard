@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:loyaltycard/Screens/authentication/login.dart';
 import 'package:loyaltycard/Screens/home.dart';
 
-
 class Wrapper extends StatefulWidget {
   const Wrapper({Key? key}) : super(key: key);
 
@@ -19,7 +18,7 @@ class _WrapperState extends State<Wrapper> {
           stream: FirebaseAuth.instance.authStateChanges(),
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              return const Homepage();
+              return HomePage();
             } else {
               return const Login();
             }
